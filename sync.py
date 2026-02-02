@@ -169,6 +169,11 @@ def parse_task_entry(line: str, all_lines: list, section: str) -> dict:
             score_match = re.search(r'效率得分:\s*([\d.]+)', detail_line)
             if score_match:
                 task['efficiency_score'] = float(score_match.group(1))
+        
+        if '完成时间:' in detail_line:
+            time_match = re.search(r'完成时间:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})', detail_line)
+            if time_match:
+                task['end_time'] = time_match.group(1).replace(' ', 'T') + ':00'
     
     return task
 
