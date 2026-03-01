@@ -48,12 +48,12 @@ def save_config(config: dict):
             json.dump(config, f, indent=2)
         print(f"✅ 配置已保存到 {CONFIG_FILE}")
     except IOError as e:
-        print(f"⚠️ 保存配置失败: {e}")
+        print(f"⚠️ 保存配置失败：{e}")
 
 
 def get_credentials() -> tuple:
     """获取凭据（配置文件 > 交互式输入）"""
-    api_base = '<请填写API地址>'
+    api_base = 'http://localhost:8000/api'
     
     # 1. 尝试从配置文件获取
     config = load_config()
@@ -65,19 +65,19 @@ def get_credentials() -> tuple:
     print("🔐 未找到配置，请输入登录信息：")
     sys.stdout.flush()
     
-    email = input("  邮箱: ").strip()
+    email = input("  邮箱：").strip()
     sys.stdout.flush()
     
-    password = getpass.getpass("  密码: ")
+    password = getpass.getpass("  密码：")
     sys.stdout.flush()
     
-    api_input = input(f"  API地址 [{api_base}]: ").strip()
+    api_input = input(f"  API 地址 [{api_base}]: ").strip()
     if api_input:
         api_base = api_input
     sys.stdout.flush()
     
     # 询问是否保存
-    save = input("  是否保存配置? (y/N): ").strip().lower()
+    save = input("  是否保存配置？(y/N): ").strip().lower()
     if save == 'y':
         save_config({
             'email': email,
@@ -132,10 +132,12 @@ def parse_task_entry(line: str, all_lines: list, section: str) -> dict:
         'status': status,
         'complexity': 3,
         'start_time': datetime.now().isoformat(),
+        'end_time': None,
         'interaction_count': 0,
         'rework_count': 0,
         'efficiency_score': None,
-        'project_name': None  # 稍后设置
+        'skill_name': None,
+        'project_name': None
     }
     
     start_idx = all_lines.index(line)
@@ -149,6 +151,11 @@ def parse_task_entry(line: str, all_lines: list, section: str) -> dict:
             time_match = re.search(r'开始时间:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})', detail_line)
             if time_match:
                 task['start_time'] = time_match.group(1).replace(' ', 'T') + ':00'
+        
+        if '完成时间:' in detail_line:
+            time_match = re.search(r'完成时间:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})', detail_line)
+            if time_match:
+                task['end_time'] = time_match.group(1).replace(' ', 'T') + ':00'
         
         if '复杂度:' in detail_line:
             stars = detail_line.count('⭐')
@@ -170,10 +177,10 @@ def parse_task_entry(line: str, all_lines: list, section: str) -> dict:
             if score_match:
                 task['efficiency_score'] = float(score_match.group(1))
         
-        if '完成时间:' in detail_line:
-            time_match = re.search(r'完成时间:\s*(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2})', detail_line)
-            if time_match:
-                task['end_time'] = time_match.group(1).replace(' ', 'T') + ':00'
+        if 'Skill:' in detail_line or 'skill:' in detail_line:
+            skill_match = re.search(r'Skill:\s*(.+)', detail_line, re.IGNORECASE)
+            if skill_match:
+                task['skill_name'] = skill_match.group(1).strip()
     
     return task
 
@@ -203,7 +210,7 @@ def main():
     # 读取任务清单
     task_file = Path(args.file)
     if not task_file.exists():
-        print(f"❌ 文件不存在: {args.file}")
+        print(f"❌ 文件不存在：{args.file}")
         sys.exit(1)
     
     content = task_file.read_text(encoding='utf-8')
@@ -215,7 +222,7 @@ def main():
     
     # 提取项目名称（从任务清单所在目录名）
     project_name = task_file.resolve().parent.name
-    print(f"📁 项目: {project_name}")
+    print(f"📁 项目：{project_name}")
     
     # 为所有任务设置项目名称
     for task in tasks:
@@ -231,7 +238,7 @@ def main():
     )
     if resp.status_code != 200:
         detail = resp.json().get('detail', '未知错误') if resp.text else '连接失败'
-        print(f"❌ 登录失败: {detail}")
+        print(f"❌ 登录失败：{detail}")
         sys.exit(1)
     
     token = resp.json()['access_token']
@@ -246,7 +253,7 @@ def main():
     )
     
     if resp.status_code != 200:
-        print(f"❌ 同步失败: {resp.text}")
+        print(f"❌ 同步失败：{resp.text}")
         sys.exit(1)
     
     results = resp.json()
