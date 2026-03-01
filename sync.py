@@ -172,8 +172,8 @@ def parse_task_entry(line: str, all_lines: list, section: str) -> dict:
             if count_match:
                 task['rework_count'] = int(count_match.group(1))
         
-        if '效率得分:' in detail_line:
-            score_match = re.search(r'效率得分:\s*([\d.]+)', detail_line)
+        if '效率得分：' in detail_line:
+            score_match = re.search(r'效率得分：\s*\*?\*?([\d.]+)\*?\*?', detail_line)
             if score_match:
                 task['efficiency_score'] = float(score_match.group(1))
         
